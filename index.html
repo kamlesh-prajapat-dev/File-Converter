@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal File Converter</title>
+
+    <!-- Master Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Offline Third-Party Libraries -->
+    <script src="libraries/jszip.min.js"></script>
+    <script src="libraries/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="converter-card">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="icon">🔄</div>
+            <h1>Personal File Converter</h1>
+            <p>
+                Convert your files locally inside your browser.
+                <br>
+                Fast, memory-safe, and offline capable.
+            </p>
+            <div class="privacy-badge">
+                🔒 Your files stay on your device.
+            </div>
+        </div>
+
+        <!-- 1. Upload Drop Area (Accepts Any File) -->
+        <div id="dropArea" class="drop-area">
+            <div class="upload-icon">📁</div>
+            <h2>Select File to Convert</h2>
+            <p>
+                Drag & drop your file here
+                <br>
+                or
+            </p>
+            <label for="fileInput" class="browse-button">
+                Browse File
+            </label>
+            <input type="file" id="fileInput" hidden>
+            <div class="file-info-hint">
+                Supports .dbf, .csv, .json and more
+            </div>
+        </div>
+
+        <!-- 2. Selected File Info Section -->
+        <div id="fileSection" class="file-section hidden">
+            <div class="file-row">
+                <div class="file-icon">📄</div>
+                <div class="file-details">
+                    <strong id="fileName">-</strong>
+                    <span id="fileSize">-</span>
+                    <span id="formatBadge" class="format-badge">-</span>
+                </div>
+                <button id="removeButton" class="remove-button" type="button" title="Remove File">
+                    ✕
+                </button>
+            </div>
+            <div id="largeFileWarning" class="hidden"></div>
+        </div>
+
+        <!-- 3. Target Format Selector Section -->
+        <div id="formatSelectorSection" class="format-selector-section hidden">
+            <label for="targetFormatSelect">Convert To:</label>
+            <select id="targetFormatSelect" class="format-select">
+                <!-- Dynamically populated based on conversion registry -->
+            </select>
+        </div>
+
+        <!-- 4. Progress Bar & Cancel Section -->
+        <div id="progressSection" class="progress-section hidden">
+            <div class="progress-header">
+                <span id="progressText">Processing...</span>
+                <span id="progressPercent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <button id="cancelButton" class="cancel-button" type="button">
+                Cancel Conversion
+            </button>
+        </div>
+
+        <!-- 5. Convert Action Button -->
+        <button id="convertButton" class="convert-button" disabled>
+            Convert File
+        </button>
+
+        <!-- 6. Status Banners (Error / Info / Success) -->
+        <div id="status" class="status-banner hidden"></div>
+
+        <!-- 7. Download Results Section -->
+        <div id="downloadSection" class="download-section hidden">
+            <div id="integrityBadge" class="hidden"></div>
+            <div id="downloadSummary" class="download-summary"></div>
+            <div id="downloadFileList" class="download-file-list"></div>
+            
+            <button id="resetButton" class="reset-button" type="button">
+                🔄 Convert Another File
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- Main Application Module -->
+<script type="module" src="js/app.js"></script>
+
+</body>
+</html>

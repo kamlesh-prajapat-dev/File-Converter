@@ -1,0 +1,1 @@
+// Legacy monolithic script. The application has been refactored into modular ES modules in js/app.js
