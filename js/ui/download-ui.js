@@ -31,8 +31,9 @@ export class DownloadUI {
         this.currentFiles = conversionResult.files || [];
         this.originalFileName = originalFileName || "converted";
 
-        const { totalRows, writtenRows, totalParts, integrityPassed } = conversionResult.metadata || {};
-        const isMultiPart = this.currentFiles.length > 1;
+        const mode = conversionResult.mode || (this.currentFiles.length > 1 ? "MULTI_PART_FALLBACK" : "SINGLE_FILE");
+        const { totalRows, writtenRows, totalParts, integrityPassed, fallbackReason } = conversionResult.metadata || {};
+        const isMultiPart = mode === "MULTI_PART_FALLBACK" || this.currentFiles.length > 1;
 
         // Data Integrity Verification Badge
         if (this.integrityBadgeEl) {
@@ -58,9 +59,11 @@ export class DownloadUI {
 
         // Summary Text
         if (this.summaryEl) {
-            let text = `Conversion completed. ${totalRows ? totalRows.toLocaleString() : "0"} records written safely.`;
+            let text = `Conversion completed successfully! ${totalRows ? totalRows.toLocaleString() : "0"} records written safely.`;
             if (isMultiPart) {
-                text += ` Split into ${this.currentFiles.length} safe Excel files (50,000 rows each) to prevent browser memory limitations.`;
+                text += ` Generated ${this.currentFiles.length} safe Excel part files.`;
+            } else {
+                text += ` Compiled into 1 single output file.`;
             }
             this.summaryEl.textContent = text;
         }
@@ -69,8 +72,17 @@ export class DownloadUI {
         if (this.fileListEl) {
             this.fileListEl.innerHTML = "";
 
-            // Download All (.zip) button if multi-part
             if (isMultiPart) {
+                // Render Multi-Part Fallback Warning Banner
+                const fallbackBanner = document.createElement("div");
+                fallbackBanner.className = "fallback-notice-banner";
+                fallbackBanner.innerHTML = `
+                    <strong>⚠️ Multi-Part Fallback Applied</strong>
+                    <span>${escapeHTML(fallbackReason || "Generating a single file exceeded browser memory limits. Output was safely split into separate parts to prevent browser freezing and data loss.")}</span>
+                `;
+                this.fileListEl.appendChild(fallbackBanner);
+
+                // Download All (.zip) button if multi-part
                 const zipCard = document.createElement("div");
                 zipCard.style.marginBottom = "15px";
                 zipCard.innerHTML = `

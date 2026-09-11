@@ -404,19 +404,41 @@
     transform: translateY(-1px);
 }
 
-.reset-button {
-    width: 100%;
-    background: transparent;
-    color: var(--text-main);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-btn);
-    padding: 13px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.2s;
+/* Multi-Part Fallback Notice */
+.fallback-notice-banner {
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    background: #fffbebfb;
+    border: 1px solid #fcd34d;
+    border-radius: 10px;
+    color: #92400e;
+    font-size: 13px;
+    line-height: 1.5;
 }
 
-.reset-button:hover {
-    background: #f3f4f6;
+.fallback-notice-banner strong {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: #78350f;
 }
+
+.download-zip-button {
+    width: 100%;
+    background: #4f46e5;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    transition: 0.2s ease;
+    box-shadow: 0 3px 10px rgba(79, 70, 229, 0.25);
+}
+
+.download-zip-button:hover {
+    background: #4338ca;
+    transform: translateY(-1px);
+}
+
