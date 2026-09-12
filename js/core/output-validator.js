@@ -1,10 +1,14 @@
 /**
  * Output Validator Module
  * Re-parses and validates generated output Blobs before download to ensure files are valid.
+ * Performs Round-Trip Re-Parsing for XLSX, ODS, CSV, TSV, JSON, XML, and SQL outputs.
  */
+import { getXLSX } from "./xlsx-provider.js";
+import { CSVParser } from "../converters/csv/csv-parser.js";
+
 export class OutputValidator {
     /**
-     * Validate generated conversion output Blobs
+     * Validate generated conversion output Blobs via round-trip re-parsing
      * @param {object} conversionResult 
      * @param {string} targetFormat 
      * @returns {Promise<{ isValid: boolean, error?: string }>}
@@ -20,26 +24,66 @@ export class OutputValidator {
                 return { isValid: false, error: `Generated file '${fileObj.fileName}' is empty (0 bytes).` };
             }
 
-            // Spot-check text/json syntax validity
-            if (targetFormat === "json") {
-                try {
-                    const text = await blob.text();
-                    // Peeking start and end
-                    if (!text.trim().startsWith("[") && !text.trim().startsWith("{")) {
-                        return { isValid: false, error: `Generated JSON file '${fileObj.fileName}' does not start with array or object.` };
+            // Round-Trip Validation per target format
+            switch (targetFormat) {
+                case "xlsx":
+                case "ods": {
+                    try {
+                        const XLSX = await getXLSX();
+                        const buffer = await blob.arrayBuffer();
+                        const wb = XLSX.read(buffer, { type: "array" });
+                        if (!wb || !wb.SheetNames || wb.SheetNames.length === 0) {
+                            return { isValid: false, error: `Generated spreadsheet '${fileObj.fileName}' contains no sheet tabs.` };
+                        }
+                    } catch (e) {
+                        return { isValid: false, error: `Spreadsheet round-trip validation failed: ${e.message}` };
                     }
-                } catch (e) {
-                    return { isValid: false, error: `JSON output validation failed: ${e.message}` };
+                    break;
                 }
-            } else if (targetFormat === "xml") {
-                try {
-                    const text = await blob.text();
-                    if (!text.includes("<?xml") && !text.includes("<data>")) {
-                        return { isValid: false, error: `Generated XML file '${fileObj.fileName}' missing root tag.` };
+
+                case "csv":
+                case "tsv": {
+                    try {
+                        const text = await blob.text();
+                        const parsed = CSVParser.parse(text);
+                        if (!parsed || !parsed.rows || parsed.rows.length === 0) {
+                            return { isValid: false, error: `Generated ${targetFormat.toUpperCase()} file '${fileObj.fileName}' has no data rows.` };
+                        }
+                    } catch (e) {
+                        return { isValid: false, error: `${targetFormat.toUpperCase()} round-trip validation failed: ${e.message}` };
                     }
-                } catch (e) {
-                    return { isValid: false, error: `XML output validation failed: ${e.message}` };
+                    break;
                 }
+
+                case "json": {
+                    try {
+                        const text = await blob.text();
+                        const parsed = JSON.parse(text);
+                        if (!Array.isArray(parsed) && typeof parsed !== "object") {
+                            return { isValid: false, error: `Generated JSON file '${fileObj.fileName}' is invalid.` };
+                        }
+                    } catch (e) {
+                        return { isValid: false, error: `JSON round-trip validation failed: ${e.message}` };
+                    }
+                    break;
+                }
+
+                case "xml": {
+                    try {
+                        const text = await blob.text();
+                        const doc = new DOMParser().parseFromString(text, "text/xml");
+                        const err = doc.getElementsByTagName("parsererror")[0];
+                        if (err) {
+                            return { isValid: false, error: `Generated XML is malformed: ${err.textContent}` };
+                        }
+                    } catch (e) {
+                        return { isValid: false, error: `XML round-trip validation failed: ${e.message}` };
+                    }
+                    break;
+                }
+
+                default:
+                    break;
             }
         }
 

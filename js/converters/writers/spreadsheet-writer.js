@@ -40,30 +40,38 @@ export class SpreadsheetWriter {
             let currentSheetIndex = 1;
             let totalWritten = 0;
 
-            const chunkSize = MemoryManager.getAdaptiveChunkSize(totalRows * 100);
+            if (data.tablesMap && Object.keys(data.tablesMap).length > 1) {
+                // Multi-table mode (e.g. SQL dump with multiple tables)
+                for (const [tblName, tblData] of Object.entries(data.tablesMap)) {
+                    const sheetRows = [tblData.headers, ...tblData.rows];
+                    const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+                    XLSX.utils.book_append_sheet(workbook, ws, tblName.substring(0, 31));
+                    totalWritten += tblData.rows.length;
+                }
+            } else {
+                for (let i = 0; i < totalRows; i += chunkSize) {
+                    const end = Math.min(i + chunkSize, totalRows);
+                    const count = end - i;
 
-            for (let i = 0; i < totalRows; i += chunkSize) {
-                const end = Math.min(i + chunkSize, totalRows);
-                const count = end - i;
-
-                for (let r = i; r < end; r++) {
-                    currentSheetRows.push(rows[r]);
-                    if (currentSheetRows.length - 1 >= maxRowsPerSheet) {
-                        const ws = XLSX.utils.aoa_to_sheet(currentSheetRows);
-                        XLSX.utils.book_append_sheet(workbook, ws, `Data_${currentSheetIndex}`);
-                        currentSheetIndex++;
-                        currentSheetRows = [headers];
+                    for (let r = i; r < end; r++) {
+                        currentSheetRows.push(rows[r]);
+                        if (currentSheetRows.length - 1 >= maxRowsPerSheet) {
+                            const ws = XLSX.utils.aoa_to_sheet(currentSheetRows);
+                            XLSX.utils.book_append_sheet(workbook, ws, `Data_${currentSheetIndex}`);
+                            currentSheetIndex++;
+                            currentSheetRows = [headers];
+                        }
                     }
+
+                    totalWritten += count;
+                    const progressPct = 30 + Math.round((end / totalRows) * 50);
+                    onProgress(progressPct, `Building sheet records (${end.toLocaleString()} / ${totalRows.toLocaleString()})...`);
                 }
 
-                totalWritten += count;
-                const progressPct = 30 + Math.round((end / totalRows) * 50);
-                onProgress(progressPct, `Building sheet records (${end.toLocaleString()} / ${totalRows.toLocaleString()})...`);
-            }
-
-            if (currentSheetRows.length > 1 || workbook.SheetNames.length === 0) {
-                const ws = XLSX.utils.aoa_to_sheet(currentSheetRows);
-                XLSX.utils.book_append_sheet(workbook, ws, `Data_${currentSheetIndex}`);
+                if (currentSheetRows.length > 1 || workbook.SheetNames.length === 0) {
+                    const ws = XLSX.utils.aoa_to_sheet(currentSheetRows);
+                    XLSX.utils.book_append_sheet(workbook, ws, `Data_${currentSheetIndex}`);
+                }
             }
 
             validator.addCheckpoint({

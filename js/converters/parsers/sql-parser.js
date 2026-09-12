@@ -1,13 +1,13 @@
 /**
  * SQL Parser Module
- * Parses SQL dump files containing INSERT INTO statements into normalized headers and rows.
+ * Parses SQL dump files containing INSERT INTO statements into multi-table structures and normalized rows.
  */
 export class SQLParser {
     /**
-     * Parse SQL text or ArrayBuffer into { headers, rows, totalRows, totalColumns }
+     * Parse SQL text or ArrayBuffer into { tablesMap, headers, rows, totalRows, totalColumns }
      * @param {string|ArrayBuffer} input 
      * @param {function(number, string): void} [onProgress]
-     * @returns {{ headers: Array<string>, rows: Array<Array<any>>, totalRows: number, totalColumns: number }}
+     * @returns {{ tablesMap: object, headers: Array<string>, rows: Array<Array<any>>, totalRows: number, totalColumns: number }}
      */
     static parse(input, onProgress) {
         let sqlText = "";
@@ -21,39 +21,53 @@ export class SQLParser {
 
         if (onProgress) onProgress(15, "Analyzing SQL INSERT statements...");
 
-        // Match INSERT INTO table (col1, col2) VALUES (...), (...);
-        const insertRegex = /INSERT\s+INTO\s+[`"']?\w+[`"']?\s*\(([^)]+)\)\s*VALUES\s*([\s\S]+?);/gi;
+        // Match INSERT INTO table_name (col1, col2) VALUES (...), (...);
+        const insertRegex = /INSERT\s+INTO\s+[`"']?(\w+)[`"']?\s*\(([^)]+)\)\s*VALUES\s*([\s\S]+?);/gi;
         let match;
-        let headers = [];
-        const rows = [];
+        const tablesMap = {};
+        let primaryTableName = null;
 
         while ((match = insertRegex.exec(sqlText)) !== null) {
-            const rawCols = match[1];
-            const rawValuesBlock = match[2];
+            const rawTableName = match[1].trim();
+            const rawCols = match[2];
+            const rawValuesBlock = match[3];
 
-            if (headers.length === 0) {
-                headers = rawCols.split(",").map(c => c.replace(/[`"'\s]/g, "").trim());
+            if (!primaryTableName) primaryTableName = rawTableName;
+
+            if (!tablesMap[rawTableName]) {
+                const cols = rawCols.split(",").map(c => c.replace(/[`"'\s]/g, "").trim());
+                tablesMap[rawTableName] = {
+                    tableName: rawTableName,
+                    headers: cols,
+                    rows: []
+                };
             }
 
-            // Extract tuple values (...)
+            const targetTable = tablesMap[rawTableName];
             const tupleRegex = /\(([^)]+)\)/g;
             let tupleMatch;
             while ((tupleMatch = tupleRegex.exec(rawValuesBlock)) !== null) {
                 const valStr = tupleMatch[1];
                 const vals = this.parseSqlRowValues(valStr);
-                rows.push(vals);
+                targetTable.rows.push(vals);
             }
         }
 
-        if (rows.length === 0 || headers.length === 0) {
+        const tableKeys = Object.keys(tablesMap);
+        if (tableKeys.length === 0) {
             throw new Error("No valid SQL INSERT INTO statements found in file.");
         }
 
+        const primaryTable = tablesMap[primaryTableName || tableKeys[0]];
+        const totalRows = Object.values(tablesMap).reduce((sum, tbl) => sum + tbl.rows.length, 0);
+
         return {
-            headers,
-            rows,
-            totalRows: rows.length,
-            totalColumns: headers.length
+            tablesMap,
+            headers: primaryTable.headers,
+            rows: primaryTable.rows,
+            totalRows: primaryTable.rows.length,
+            totalOverallRows: totalRows,
+            totalColumns: primaryTable.headers.length
         };
     }
 
