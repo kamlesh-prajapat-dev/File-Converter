@@ -11,6 +11,8 @@ import { ProgressUI } from "./ui/progress-ui.js";
 import { StatusUI } from "./ui/status-ui.js";
 import { DownloadUI } from "./ui/download-ui.js";
 
+import { StructureAnalyzer } from "./core/structure-analyzer.js";
+
 document.addEventListener("DOMContentLoaded", () => {
     // 1. Core Services
     const fileManager = new FileManager();
@@ -29,6 +31,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const formatSelectorSectionEl = document.getElementById("formatSelectorSection");
     const targetFormatSelectEl = document.getElementById("targetFormatSelect");
+    const lossyNoticeEl = document.getElementById("lossyNotice");
 
     const progressSectionEl = document.getElementById("progressSection");
     const progressFillEl = document.getElementById("progressFill");
@@ -65,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
         containerEl: formatSelectorSectionEl,
         selectEl: targetFormatSelectEl,
         convertBtnEl: convertBtnEl,
+        lossyNoticeEl: lossyNoticeEl,
         onFormatChanged: () => {
             statusUI.hide();
         }
@@ -113,8 +117,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 statusUI.showError({
                     title: "Format Not Recognized",
                     reason: `Could not identify format of file '${file.name}'.`,
-                    solution: "Please select a valid .dbf, .csv, or .json file."
+                    solution: "Please select a supported spreadsheet, database, structured data, or markup file."
                 });
+                return;
+            }
+
+            if (detection.format === "pdf" || detection.format === "zip") {
+                statusUI.showError({
+                    title: "Conversion Not Supported",
+                    reason: `File format '${(detection.format || "").toUpperCase()}' is detected, but client-side conversion for this format is not supported.`,
+                    solution: "Please upload a supported format such as Excel (.xlsx), CSV, JSON, XML, SQL, or DBF."
+                });
+                fileInfoUI.displayFile(file, detection);
+                uploadUI.hide();
+                formatSelectorUI.hide();
                 return;
             }
 
@@ -122,8 +138,11 @@ document.addEventListener("DOMContentLoaded", () => {
             fileInfoUI.displayFile(file, detection);
             uploadUI.hide();
 
+            // Run structure analysis
+            const structure = await StructureAnalyzer.analyze(file, detection.format);
+
             // Populate valid target formats
-            formatSelectorUI.populateTargets(detection.format);
+            formatSelectorUI.populateTargets(detection.format, structure);
 
         } catch (err) {
             statusUI.showError({

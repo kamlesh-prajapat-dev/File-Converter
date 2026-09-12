@@ -6,6 +6,7 @@
 import { ConversionValidator } from "./conversion-validator.js";
 import { ErrorManager, ERROR_CODES } from "./error-manager.js";
 import { isWorkerSupported } from "../utils/browser-utils.js";
+import { UniversalConverter } from "../converters/universal-converter.js";
 
 // Direct imports for main thread fallback execution
 import { DBFToXlsxConverter } from "../converters/dbf/dbf-to-xlsx.js";
@@ -145,22 +146,13 @@ export class ConversionManager {
      * Fallback execution directly on main thread
      */
     async runDirectConversion(fileName, sourceFormat, targetFormat, arrayBuffer, options) {
-        const key = `${sourceFormat}-to-${targetFormat}`;
-        const Converter = directConverters[key];
-        if (!Converter) {
-            return {
-                success: false,
-                error: ErrorManager.createError(ERROR_CODES.UNSUPPORTED_CONVERSION)
-            };
-        }
-
         const onProgress = (percentage, message) => {
             if (this.isCancelled) throw new Error("CANCELLED");
             this.progressManager.update(percentage, message);
         };
 
         try {
-            return await Converter.convert(arrayBuffer, { ...options, fileName }, onProgress);
+            return await UniversalConverter.convert(arrayBuffer, sourceFormat, targetFormat, { ...options, fileName }, onProgress);
         } catch (err) {
             if (err.message === "CANCELLED" || this.isCancelled) {
                 return { success: false, error: ErrorManager.createError(ERROR_CODES.CANCELLED) };

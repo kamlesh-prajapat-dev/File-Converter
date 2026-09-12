@@ -1,70 +1,13 @@
-/**
- * File Format Detector
- * Detects format by extension and inspects binary headers for confirmation.
- */
-import { getFileExtension, readHeaderBytes } from "../utils/file-utils.js";
+import { FileDetectionEngine } from "./file-detection-engine.js";
 
 export class FileDetector {
     /**
      * Detect file type from File object
      * @param {File} file 
-     * @returns {Promise<{ format: string, extension: string, name: string, confidence: string }>}
+     * @returns {Promise<{ format: string, category: string, extension: string, name: string, confidence: string, isExtensionMismatch: boolean }>}
      */
     static async detectFormat(file) {
-        if (!file) {
-            throw new Error("No file provided for detection.");
-        }
-
-        const ext = getFileExtension(file.name);
-
-        // Read first 64 bytes for magic header verification
-        try {
-            const headerBytes = await readHeaderBytes(file, 64);
-
-            // Check DBF signature byte (0x03 = FoxBase/dBase III without memo, 0x83 = with dBASE III memo, 0x30 = Visual FoxPro, etc.)
-            if (ext === "dbf" || this.isDBFHeader(headerBytes)) {
-                return {
-                    format: "dbf",
-                    extension: ext || "dbf",
-                    name: file.name,
-                    confidence: "high"
-                };
-            }
-
-            // Check JSON format
-            if (ext === "json" || this.isJSONHeader(headerBytes)) {
-                return {
-                    format: "json",
-                    extension: ext || "json",
-                    name: file.name,
-                    confidence: "high"
-                };
-            }
-
-            // Check CSV format
-            if (ext === "csv" || ext === "txt" || this.isCSVHeader(headerBytes)) {
-                return {
-                    format: "csv",
-                    extension: ext || "csv",
-                    name: file.name,
-                    confidence: "high"
-                };
-            }
-        } catch (e) {
-            console.warn("Header detection fallback to extension:", e);
-        }
-
-        // Fallback by extension matching
-        if (ext === "dbf") return { format: "dbf", extension: "dbf", name: file.name, confidence: "medium" };
-        if (ext === "csv" || ext === "txt") return { format: "csv", extension: ext, name: file.name, confidence: "medium" };
-        if (ext === "json") return { format: "json", extension: "json", name: file.name, confidence: "medium" };
-
-        return {
-            format: "unknown",
-            extension: ext,
-            name: file.name,
-            confidence: "none"
-        };
+        return await FileDetectionEngine.detect(file);
     }
 
     /**

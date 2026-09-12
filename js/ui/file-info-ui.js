@@ -31,19 +31,34 @@ export class FileInfoUI {
 
         if (this.formatBadgeEl) {
             const formatStr = (detection.format || "unknown").toUpperCase();
-            this.formatBadgeEl.textContent = formatStr;
+            const categoryStr = detection.category ? ` (${detection.category})` : "";
+            this.formatBadgeEl.textContent = `${formatStr}${categoryStr}`;
             this.formatBadgeEl.className = `format-badge badge-${formatStr.toLowerCase()}`;
         }
 
-        // Show large file notice if file size exceeds threshold
+        // Show extension mismatch alert or large file notice
         if (this.warningBannerEl) {
+            let noticeHtml = "";
+
+            if (detection.isExtensionMismatch) {
+                noticeHtml += `
+                    <div class="mismatch-notice" style="margin-bottom: 8px; padding: 6px 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px; color: #856404; font-size: 0.85rem;">
+                        🔍 <strong>Extension Mismatch Detected:</strong> File extension '.${escapeHTML(detection.extension)}' differs from actual format <strong>${escapeHTML((detection.format || "").toUpperCase())}</strong>. Handled as ${escapeHTML((detection.format || "").toUpperCase())}.
+                    </div>
+                `;
+            }
+
             if (file.size > CONFIG.LARGE_FILE_THRESHOLD_BYTES) {
-                this.warningBannerEl.innerHTML = `
+                noticeHtml += `
                     <div class="large-file-notice">
                         ⚡ <strong>Large File Detected (${formatFileSize(file.size)})</strong>: 
                         Output will automatically be split into multiple parts (50,000 rows each) to prevent browser memory issues.
                     </div>
                 `;
+            }
+
+            if (noticeHtml) {
+                this.warningBannerEl.innerHTML = noticeHtml;
                 this.warningBannerEl.classList.remove("hidden");
             } else {
                 this.warningBannerEl.classList.add("hidden");

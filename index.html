@@ -45,7 +45,7 @@
             </label>
             <input type="file" id="fileInput" hidden>
             <div class="file-info-hint">
-                Supports .dbf, .csv, .json and more
+                Supports Excel (.xlsx, .xls), OpenDocument (.ods), dBase (.dbf), CSV, TSV, JSON, XML, SQL, YAML, HTML & Markdown
             </div>
         </div>
 
@@ -71,6 +71,7 @@
             <select id="targetFormatSelect" class="format-select">
                 <!-- Dynamically populated based on conversion registry -->
             </select>
+            <div id="lossyNotice" class="hidden" style="margin-top: 10px; padding: 8px 12px; background-color: #fff8e1; border: 1px solid #ffe082; border-radius: 4px; color: #856404; font-size: 0.85rem;"></div>
         </div>
 
         <!-- 4. Progress Bar & Cancel Section -->
